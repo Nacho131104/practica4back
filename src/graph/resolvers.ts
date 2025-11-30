@@ -21,7 +21,7 @@ export const resolvers: IResolvers= {
       const existingUser = await db.collection("Usuarios").findOne({ email });
       if (existingUser) throw new Error('Usuario ya existe');
 
-      const result = await db.collection('users').insertOne({ email, password });
+      const result = await db.collection('Usuarios').insertOne({ email, password });
       return result.insertedId.toString(); // o token si usas JWT
     },
 
@@ -42,7 +42,7 @@ export const resolvers: IResolvers= {
         fechaCreada: fecha,
       };
 
-      const result = await db.collection('posts').insertOne(newPost);
+      const result = await db.collection('Posts').insertOne(newPost);
       return { _id: result.insertedId, ...newPost };
     },
 
