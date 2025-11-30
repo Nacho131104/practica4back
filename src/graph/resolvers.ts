@@ -1,65 +1,126 @@
-import { IResolvers } from '@graphql-tools/utils';
-import { ObjectId } from 'mongodb';
 
-export const resolvers: IResolvers= {
+import { IResolvers } from "@graphql-tools/utils";
+import { getDb } from "../mongo";
+import { ObjectId } from "mongodb";
+import { insertarUsuario } from "../utils/user";
+import { signToken } from "../utils/auth";
+import { comprobarContraseña } from "../utils/user";
+
+const COLLECTION = "Posts";
+
+export const resolvers: IResolvers = {
   Query: {
+    getPost: async () => {
+      const db = getDb();
+      return db.collection("Posts").find().toArray();
+    },
+    getPostID: async (_, { id }: { id: string }) => {
+      const db = getDb();
+      return db.collection("Posts").findOne({ _id: new ObjectId(id) });
+    },
+
     me: async (_, __, { user }) => {
-      return user || null;
-    },
-
-    getPost: async (_, __, { db }) => {
-      return await db.collection("Posts").find().toArray();
-    },
-
-    getPostID: async (_, { id }, { db }) => {
-      return await db.collection("Posts").findOne({ _id: new ObjectId(id) });
-    },
+      if (!user) return null
+      console.log(user)
+      return {
+        _id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        password: user.password,
+      }
+    }
   },
 
   Mutation: {
-    register: async (_, { email, password }, { db }) => {
-      const existingUser = await db.collection("Usuarios").findOne({ email });
-      if (existingUser) throw new Error('Usuario ya existe');
+    addPost: async (_, { titulo, contenido, fecha }: { titulo: string; contenido: string; fecha: string }, { user }) => {
+      if (!user) {
+        throw new Error("Usuario no autentificado")
+      }
+      const db = getDb();
 
-      const result = await db.collection('Usuarios').insertOne({ email, password });
-      return result.insertedId.toString(); // o token si usas JWT
-    },
-
-    login: async (_, { email, password }, { db }) => {
-      const user = await db.collection("Usuarios").findOne({ email });
-      if (!user || user.password !== password) throw new Error('Credenciales inválidas');
-
-      return user._id.toString(); // o token si usas JWT
-    },
-
-    addPost: async (_, { titulo, contenido, fecha }, { db, user }) => {
-      if (!user) throw new Error('No autenticado');
-
-      const newPost = {
+      const result = await db.collection("Posts").insertOne({
         titulo,
         contenido,
         autor: user.name,
-        fechaCreada: fecha,
+        fecha,
+        userId: new ObjectId(user._id)
+      });
+
+      return {
+        _id: result.insertedId,
+        titulo,
+        contenido,
+        autor: user.name,
+        fecha,
       };
 
-      const result = await db.collection('Posts').insertOne(newPost);
-      return { _id: result.insertedId, ...newPost };
     },
 
-    updatePost: async (_, { _id, titulo, contenido, autor, fecha }, { db }) => {
+    updatePost: async (
+      _,
+      { _id, titulo, contenido, fecha }: { _id: string; titulo?: string; contenido?: string; fecha?: string },
+      { user }
+    ) => {
+      if (!user) {
+        throw new Error("Usuario no autentificado");
+      }
 
-      const updateFields = { titulo, contenido, autor, fecha };
-      const result = await db.collection("Posts").findOneAndUpdate(
-        { _id: new ObjectId(_id) },
-        { $set: updateFields },
-        { returnDocument: 'after' }
+      const db = getDb();
+
+      const nuevo : any = {};
+      if (titulo !== undefined) nuevo.titulo = titulo;
+      if (contenido !== undefined) nuevo.contenido = contenido;
+      if (fecha !== undefined) nuevo.fecha = fecha;
+
+      const result = await db.collection("Posts").updateOne(
+        { _id: new ObjectId(_id), userId: new ObjectId(user._id) },
+        { $set: nuevo }
       );
-      return result.value;
+
+      if (result.matchedCount === 0) {
+        throw new Error("No se encontro el post con ese id");
+      }
+
+      return await db.collection("Posts").findOne({
+        _id: new ObjectId(_id),
+      });
     },
 
-    deletePost: async (_, { _id }, { db }) => {
-      const result = await db.collection("Posts").deleteOne({ _id: new ObjectId(_id) });
-      return result.deletedCount === 1;
+
+
+    deletePost: async (_, { _id }: { _id: string }, { user }) => {
+      if (!user) {
+        throw new Error("Usuario no autentificado");
+      }
+
+      const db = getDb();
+
+      const result = await db.collection("Posts").deleteOne({
+        _id: new ObjectId(_id),
+        userId: new ObjectId(user._id),
+      });
+
+      if (result.deletedCount === 0) {
+        throw new Error("Post no encontrado o no es tuyo");
+      }
+
+      return true;
     },
+
+
+
+    register: async (_, { name, email, password }) => {
+      const userId = await insertarUsuario(name, email, password)
+      return signToken(userId)
+    },
+
+    login: async (_, { email, password }: { email: string, password: string }) => {
+      const user = await comprobarContraseña(email, password)
+      if (!user) {
+        throw new Error("Credenciales incorrectas")
+      }
+      return signToken(user._id.toString())
+    },
+
   },
 };

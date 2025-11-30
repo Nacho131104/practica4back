@@ -13,7 +13,12 @@ const app = async () => {
 
   const server = new ApolloServer({
     typeDefs,
-    resolvers
+    resolvers,
+    context: async ({ req }) => {
+        const token = req.headers.authorization || "";
+        const user = token ? await getUserFromToken(token as string) : null;
+        return { user };
+    },
   }
   );
   await server.listen({ port: 4000 });

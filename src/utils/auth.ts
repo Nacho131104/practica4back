@@ -25,7 +25,7 @@ export const verifyToken = (token: string): TokenPayload | null => {
 export const getUserFromToken = async (token: string) => {
     const payload = verifyToken(token);
     if(!payload) return null;
-    const colleccion = getDb().collection<User>("Usuarios");
+    const colleccion = getDb().collection("Usuarios");
     return await colleccion.findOne({
         _id: new ObjectId(payload.userId)
     })
