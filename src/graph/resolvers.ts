@@ -6,8 +6,6 @@ import { insertarUsuario } from "../utils/user";
 import { signToken } from "../utils/auth";
 import { comprobarContraseña } from "../utils/user";
 
-const COLLECTION = "Posts";
-
 export const resolvers: IResolvers = {
   Query: {
     getPost: async () => {
@@ -32,7 +30,7 @@ export const resolvers: IResolvers = {
   },
 
   Mutation: {
-    addPost: async (_, { titulo, contenido, fecha }: { titulo: string; contenido: string; fecha: string }, { user }) => {
+    addPost: async (_, { titulo, contenido, fecha }, { user }) => {
       if (!user) {
         throw new Error("Usuario no autentificado")
       }
@@ -56,11 +54,7 @@ export const resolvers: IResolvers = {
 
     },
 
-    updatePost: async (
-      _,
-      { _id, titulo, contenido, fecha }: { _id: string; titulo?: string; contenido?: string; fecha?: string },
-      { user }
-    ) => {
+    updatePost: async (_,{ _id, titulo, contenido, fecha },{ user }) => {
       if (!user) {
         throw new Error("Usuario no autentificado");
       }
@@ -88,7 +82,7 @@ export const resolvers: IResolvers = {
 
 
 
-    deletePost: async (_, { _id }: { _id: string }, { user }) => {
+    deletePost: async (_, { _id }, { user }) => {
       if (!user) {
         throw new Error("Usuario no autentificado");
       }
@@ -114,7 +108,7 @@ export const resolvers: IResolvers = {
       return signToken(userId)
     },
 
-    login: async (_, { email, password }: { email: string, password: string }) => {
+    login: async (_, { email, password }) => {
       const user = await comprobarContraseña(email, password)
       if (!user) {
         throw new Error("Credenciales incorrectas")

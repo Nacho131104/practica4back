@@ -14,7 +14,7 @@ export const typeDefs = gql`
         titulo:String
         contenido:String
         autor:String
-        fechaCreada:String
+        fecha:String
     }
 
     type Query {
