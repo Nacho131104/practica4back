@@ -6,17 +6,17 @@ import {TokenPayload, User}from "../types"
 dotenv.config()
 
 
-const SUPER_SECRETO = process.env.SECRET;
+const SECRET = process.env.SECRET;
 
 
 
 
-export const signToken = (userId: string) => jwt.sign({ userId }, SUPER_SECRETO!, { expiresIn: "1h" });
+export const signToken = (userId: string) => jwt.sign({ userId }, SECRET!, { expiresIn: "1h" });
 
 
 export const verifyToken = (token: string): TokenPayload | null => {
     try{
-        return jwt.verify(token, SUPER_SECRETO!) as TokenPayload;
+        return jwt.verify(token, SECRET!) as TokenPayload;
     }catch (err){
         return null;
     }
